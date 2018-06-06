@@ -32,7 +32,7 @@
           </mat-select>
         </mat-form-field>
         <br>
-        <button mat-raised-button (click)="onGeneratePassword()" [disabled]="!isCheckedSymbols && !isCheckedLower && !isCheckedUpper && !isCheckedNumber">GENERATE</button>
+        <button mat-button color="primary" (click)="onGeneratePassword()" [disabled]="!isCheckedSymbols && !isCheckedLower && !isCheckedUpper && !isCheckedNumber">GENERATE</button>
       </section>
     </mat-card-content>
   </mat-card>
