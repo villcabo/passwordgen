@@ -5,7 +5,7 @@
     "ng": "ng",
     "start": "ng serve --live-reload false --port 4000",
     "build": "ng build --prod",
-    "build:gh": "ng build --prod --build-optimizer --source-map --base-href=/passwordgen",
+    "build:gh": "ng build --prod --build-optimizer --base-href=/passwordgen/",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e"
