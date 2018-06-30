@@ -13,6 +13,8 @@ const specialChars = '!@#$%^&*(){}[]_+?></=';
 })
 export class AppComponent implements OnInit {
 
+  version = '1.0.1';
+
   strengthList = strengthList();
   selectedStrength: string;
 
@@ -54,5 +56,4 @@ export class AppComponent implements OnInit {
       return array;
     }
   }
-
 }
