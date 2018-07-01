@@ -33,7 +33,7 @@ const MATERIAL_MODULE = [
     BrowserAnimationsModule,
     FormsModule,
     MATERIAL_MODULE,
-    ServiceWorkerModule.register('/ngsw-worker.js', { enabled: environment.production })
+    ServiceWorkerModule.register('/passwordgen/ngsw-worker.js', { enabled: environment.production })
   ],
   declarations: [
     AppComponent
