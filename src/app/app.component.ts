@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { strengthList } from './util/length-util';
+import { environment } from '../environments/environment.prod';
 
 const numberChars = '0123456789';
 const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -13,7 +14,7 @@ const specialChars = '!@#$%^&*(){}[]_+?></=';
 })
 export class AppComponent implements OnInit {
 
-  version = '1.0.1';
+  version = environment.version;
 
   strengthList = strengthList();
   selectedStrength: string;
