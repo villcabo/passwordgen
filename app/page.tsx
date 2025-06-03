@@ -104,43 +104,42 @@ const sequences = [
 export default function PasswordGenerator() {
   const [config, setConfig] = useState<PasswordConfig>(defaultConfig)
   const [passwords, setPasswords] = useState<string[]>([])
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
-  const { setTheme, theme } = useTheme()
+  const { setTheme, theme, resolvedTheme } = useTheme()
 
-  // Load config and theme from localStorage on mount
+  // Handle hydration
   useEffect(() => {
-    const savedConfig = localStorage.getItem("passwordGeneratorConfig")
-    if (savedConfig) {
-      const parsed = JSON.parse(savedConfig)
-      setConfig({ ...defaultConfig, ...parsed })
-    }
+    setMounted(true)
+  }, [])
 
-    const savedTheme = localStorage.getItem("passwordGeneratorTheme")
-    if (savedTheme) {
-      const isDark = savedTheme === "dark"
-      setIsDarkMode(isDark)
-      setTheme(savedTheme)
+  // Load config from localStorage on mount
+  useEffect(() => {
+    if (mounted) {
+      const savedConfig = localStorage.getItem("passwordGeneratorConfig")
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig)
+        setConfig({ ...defaultConfig, ...parsed })
+      }
     }
-  }, [setTheme])
+  }, [mounted])
 
   // Save config to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("passwordGeneratorConfig", JSON.stringify(config))
-  }, [config])
+    if (mounted) {
+      localStorage.setItem("passwordGeneratorConfig", JSON.stringify(config))
+    }
+  }, [config, mounted])
 
   // Auto-generate passwords when config changes (if enabled)
   useEffect(() => {
-    if (config.autoGenerate) {
+    if (config.autoGenerate && mounted) {
       generatePasswords()
     }
-  }, [config])
+  }, [config, mounted])
 
   const toggleTheme = () => {
-    const newTheme = isDarkMode ? "light" : "dark"
-    setIsDarkMode(!isDarkMode)
-    setTheme(newTheme)
-    localStorage.setItem("passwordGeneratorTheme", newTheme)
+    setTheme(resolvedTheme === "dark" ? "light" : "dark")
   }
 
   const updateConfig = (key: keyof PasswordConfig, value: any) => {
@@ -395,10 +394,10 @@ export default function PasswordGenerator() {
     return (
       <Badge
         variant={isStrong ? "default" : "secondary"}
-        className={`ml-2 transition-all duration-200 glass-button ${
+        className={`ml-2 transition-all duration-300 glass-badge ${
           isStrong
-            ? "bg-emerald-500/80 hover:bg-emerald-600/80 text-white border-emerald-400/30"
-            : "bg-amber-500/80 hover:bg-amber-600/80 text-white border-amber-400/30"
+            ? "bg-emerald-500/90 hover:bg-emerald-600/90 text-white border-emerald-400/40"
+            : "bg-amber-500/90 hover:bg-amber-600/90 text-white border-amber-400/40"
         }`}
       >
         {isStrong ? (
@@ -416,6 +415,10 @@ export default function PasswordGenerator() {
     )
   }
 
+  if (!mounted) {
+    return null
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Floating Background Orbs */}
@@ -423,40 +426,38 @@ export default function PasswordGenerator() {
       <div className="floating-orb"></div>
       <div className="floating-orb"></div>
 
+      {/* Fixed Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 glass-header">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/30 to-purple-600/30 glass-button">
+                <Shield className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-300 bg-clip-text text-transparent">
+                Password Generator
+              </h1>
+            </div>
+            <Button onClick={toggleTheme} variant="outline" size="icon" className="glass-button rounded-full">
+              {resolvedTheme === "dark" ? (
+                <Sun className="h-5 w-5 text-amber-500" />
+              ) : (
+                <Moon className="h-5 w-5 text-slate-600" />
+              )}
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          </div>
+        </div>
+      </nav>
+
       {/* Main Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-all duration-500"></div>
 
-      <div className="relative z-10 max-w-7xl mx-auto p-4 space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-6 py-12">
-          <div className="glass-header rounded-3xl p-8 mx-auto max-w-4xl">
-            <div className="flex items-center justify-center gap-6 mb-6">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-600/20 backdrop-blur-sm border border-white/20">
-                <Shield className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <h1 className="text-6xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-300 bg-clip-text text-transparent">
-                Password Generator
-              </h1>
-              <Button
-                onClick={toggleTheme}
-                variant="outline"
-                size="icon"
-                className="glass-button rounded-full border-white/30 dark:border-slate-600/30"
-              >
-                {isDarkMode ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-slate-600" />}
-                <span className="sr-only">Toggle theme</span>
-              </Button>
-            </div>
-            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              Genera contraseñas seguras y personalizadas con algoritmos avanzados de seguridad
-            </p>
-          </div>
-        </div>
-
+      <div className="relative z-10 max-w-7xl mx-auto p-4 pt-24 space-y-8">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Configuration Panel */}
           <div className="xl:col-span-1">
-            <Card className="glass-card border-white/20 dark:border-slate-600/20 shadow-2xl">
+            <Card className="glass-card shadow-2xl">
               <CardHeader className="pb-6">
                 <CardTitle className="flex items-center text-xl text-slate-800 dark:text-slate-100">
                   <Settings className="w-5 h-5 mr-3 text-indigo-600 dark:text-indigo-400" />
@@ -482,7 +483,7 @@ export default function PasswordGenerator() {
                       max={50}
                       min={6}
                       step={1}
-                      className="w-full"
+                      className="w-full glass-slider-track"
                     />
                     <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
                       <span>6 caracteres</span>
@@ -503,10 +504,10 @@ export default function PasswordGenerator() {
                     value={config.quantity.toString()}
                     onValueChange={(value) => updateConfig("quantity", Number.parseInt(value))}
                   >
-                    <SelectTrigger className="h-12 glass-input border-white/30 dark:border-slate-600/30">
+                    <SelectTrigger className="h-12 glass-input">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="glass-card border-white/30 dark:border-slate-600/30">
+                    <SelectContent className="glass-card">
                       {Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
                         <SelectItem key={num} value={num.toString()}>
                           {num} contraseña{num > 1 ? "s" : ""}
@@ -516,7 +517,7 @@ export default function PasswordGenerator() {
                   </Select>
                 </div>
 
-                <Separator className="my-6 bg-white/20 dark:bg-slate-600/20" />
+                <Separator className="my-6 bg-white/30 dark:bg-slate-600/30" />
 
                 {/* Character Options */}
                 <div className="space-y-4">
@@ -529,13 +530,13 @@ export default function PasswordGenerator() {
                     ].map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center space-x-3 p-4 rounded-xl glass-button border-white/30 dark:border-slate-600/30 hover:scale-[1.02] transition-all duration-200"
+                        className="flex items-center space-x-3 p-4 rounded-xl glass-button hover:scale-[1.02] transition-all duration-200"
                       >
                         <Checkbox
                           id={item.id}
                           checked={config[item.key as keyof PasswordConfig] as boolean}
                           onCheckedChange={(checked) => updateConfig(item.key, checked)}
-                          className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                          className="glass-checkbox"
                         />
                         <Label
                           htmlFor={item.id}
@@ -548,7 +549,7 @@ export default function PasswordGenerator() {
                   </div>
                 </div>
 
-                <Separator className="my-6 bg-white/20 dark:bg-slate-600/20" />
+                <Separator className="my-6 bg-white/30 dark:bg-slate-600/30" />
 
                 {/* Advanced Options */}
                 <div className="space-y-4">
@@ -563,13 +564,13 @@ export default function PasswordGenerator() {
                     ].map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center space-x-3 p-3 rounded-lg glass-button border-white/20 dark:border-slate-600/20 hover:scale-[1.01] transition-all duration-200"
+                        className="flex items-center space-x-3 p-3 rounded-lg glass-button hover:scale-[1.01] transition-all duration-200"
                       >
                         <Checkbox
                           id={item.id}
                           checked={config[item.key as keyof PasswordConfig] as boolean}
                           onCheckedChange={(checked) => updateConfig(item.key, checked)}
-                          className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                          className="glass-checkbox"
                         />
                         <Label
                           htmlFor={item.id}
@@ -582,7 +583,7 @@ export default function PasswordGenerator() {
                   </div>
                 </div>
 
-                <Separator className="my-6 bg-white/20 dark:bg-slate-600/20" />
+                <Separator className="my-6 bg-white/30 dark:bg-slate-600/30" />
 
                 {/* Custom Characters */}
                 <div className="space-y-3">
@@ -594,7 +595,7 @@ export default function PasswordGenerator() {
                     value={config.customCharacters}
                     onChange={(e) => updateConfig("customCharacters", e.target.value)}
                     placeholder="Ej: !@#$%^&*()..."
-                    className="h-12 font-mono glass-input border-white/30 dark:border-slate-600/30 text-slate-800 dark:text-slate-100"
+                    className="h-12 font-mono glass-input text-slate-800 dark:text-slate-100"
                   />
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Caracteres adicionales que se combinarán con las opciones seleccionadas arriba
@@ -606,7 +607,7 @@ export default function PasswordGenerator() {
 
           {/* Generated Passwords */}
           <div className="xl:col-span-2">
-            <Card className="glass-card border-white/20 dark:border-slate-600/20 shadow-2xl">
+            <Card className="glass-card shadow-2xl">
               <CardHeader className="pb-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -618,7 +619,7 @@ export default function PasswordGenerator() {
                   <Button
                     onClick={generatePasswords}
                     size="lg"
-                    className="h-12 px-6 glass-button bg-indigo-500/80 hover:bg-indigo-600/80 text-white border-indigo-400/30"
+                    className="h-12 px-6 glass-button bg-indigo-500/90 hover:bg-indigo-600/90 text-white border-indigo-400/40"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Generar
@@ -628,7 +629,7 @@ export default function PasswordGenerator() {
               <CardContent>
                 {passwords.length === 0 ? (
                   <div className="text-center py-16 text-slate-500 dark:text-slate-400">
-                    <div className="p-6 rounded-full glass-button w-fit mx-auto mb-6 border-white/30 dark:border-slate-600/30">
+                    <div className="p-6 rounded-full glass-button w-fit mx-auto mb-6">
                       <Shield className="w-16 h-16 opacity-50" />
                     </div>
                     <p className="text-lg">Haz clic en "Generar" para crear contraseñas</p>
@@ -639,7 +640,7 @@ export default function PasswordGenerator() {
                     value={config.viewMode}
                     onValueChange={(v) => updateConfig("viewMode", v as "detailed" | "export")}
                   >
-                    <TabsList className="grid w-full grid-cols-2 mb-6 h-12 glass-button border-white/30 dark:border-slate-600/30">
+                    <TabsList className="grid w-full grid-cols-2 mb-6 h-12 glass-tabs">
                       <TabsTrigger value="detailed" className="text-base">
                         Vista Detallada
                       </TabsTrigger>
@@ -652,7 +653,7 @@ export default function PasswordGenerator() {
                       {passwords.map((password, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-4 glass-button border-white/30 dark:border-slate-600/30 rounded-xl hover:scale-[1.01] transition-all duration-200 group"
+                          className="flex items-center justify-between p-4 password-display rounded-xl group"
                         >
                           <code className="font-mono text-base flex-1 mr-4 break-all select-all text-slate-800 dark:text-slate-100">
                             {password}
@@ -661,7 +662,7 @@ export default function PasswordGenerator() {
                             size="sm"
                             variant="outline"
                             onClick={() => copyToClipboard(password)}
-                            className="shrink-0 opacity-70 group-hover:opacity-100 transition-opacity glass-button border-white/30 dark:border-slate-600/30"
+                            className="shrink-0 opacity-70 group-hover:opacity-100 transition-opacity glass-button"
                           >
                             <Copy className="w-4 h-4" />
                           </Button>
@@ -671,14 +672,14 @@ export default function PasswordGenerator() {
 
                     <TabsContent value="export">
                       <div className="space-y-6">
-                        <div className="p-6 glass-button border-white/30 dark:border-slate-600/30 rounded-xl">
+                        <div className="p-6 glass-button rounded-xl">
                           <pre className="font-mono text-sm whitespace-pre-wrap break-all max-h-[500px] overflow-y-auto text-slate-800 dark:text-slate-100">
                             {passwords.join("\n")}
                           </pre>
                         </div>
                         <Button
                           onClick={() => copyToClipboard(passwords)}
-                          className="w-full h-12 text-base glass-button bg-indigo-500/80 hover:bg-indigo-600/80 text-white border-indigo-400/30"
+                          className="w-full h-12 text-base glass-button bg-indigo-500/90 hover:bg-indigo-600/90 text-white border-indigo-400/40"
                         >
                           <Copy className="w-4 h-4 mr-2" />
                           Copiar todas las contraseñas
