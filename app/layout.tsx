@@ -10,6 +10,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Password Generator",
   description: "Genera contraseñas seguras y personalizadas",
+  generator: "v0.dev",
   icons: {
     icon: [
       {

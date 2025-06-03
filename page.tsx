@@ -423,35 +423,36 @@ export default function PasswordGenerator() {
       <div className="floating-orb"></div>
       <div className="floating-orb"></div>
 
-      {/* Fixed Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-header border-b border-white/20 dark:border-slate-600/20">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-600/20 backdrop-blur-sm border border-white/20">
-                <Shield className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-300 bg-clip-text text-transparent">
-                Password Generator
-              </h1>
-            </div>
-            <Button
-              onClick={toggleTheme}
-              variant="outline"
-              size="icon"
-              className="glass-button rounded-full border-white/30 dark:border-slate-600/30"
-            >
-              {isDarkMode ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-slate-600" />}
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-          </div>
-        </div>
-      </nav>
-
       {/* Main Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-all duration-500"></div>
 
-      <div className="relative z-10 max-w-7xl mx-auto p-4 pt-24 space-y-8">
+      <div className="relative z-10 max-w-7xl mx-auto p-4 space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-6 py-12">
+          <div className="glass-header rounded-3xl p-8 mx-auto max-w-4xl">
+            <div className="flex items-center justify-center gap-6 mb-6">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-600/20 backdrop-blur-sm border border-white/20">
+                <Shield className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h1 className="text-6xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-300 bg-clip-text text-transparent">
+                Password Generator
+              </h1>
+              <Button
+                onClick={toggleTheme}
+                variant="outline"
+                size="icon"
+                className="glass-button rounded-full border-white/30 dark:border-slate-600/30"
+              >
+                {isDarkMode ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-slate-600" />}
+                <span className="sr-only">Toggle theme</span>
+              </Button>
+            </div>
+            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              Genera contraseñas seguras y personalizadas con algoritmos avanzados de seguridad
+            </p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Configuration Panel */}
           <div className="xl:col-span-1">
