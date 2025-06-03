@@ -467,7 +467,7 @@ export default function PasswordGenerator() {
                   Personaliza tu generador de contraseñas
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-8">
+              <CardContent className="space-y-4">
                 {/* Length Slider */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -510,7 +510,7 @@ export default function PasswordGenerator() {
                     <SelectContent className="glass-card">
                       {Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
                         <SelectItem key={num} value={num.toString()}>
-                          {num} contraseña{num > 1 ? "s" : ""}
+                          {num}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -551,6 +551,25 @@ export default function PasswordGenerator() {
 
                 <Separator className="my-6 bg-white/30 dark:bg-slate-600/30" />
 
+                {/* Custom Characters */}
+                <div className="space-y-3">
+                  <Label htmlFor="customChars" className="text-base font-medium text-slate-700 dark:text-slate-200">
+                    Caracteres especiales adicionales
+                  </Label>
+                  <Input
+                    id="customChars"
+                    value={config.customCharacters}
+                    onChange={(e) => updateConfig("customCharacters", e.target.value)}
+                    placeholder="Ej: !@#$%^&*()..."
+                    className="h-12 text-center font-mono glass-input text-slate-800 dark:text-slate-100"
+                  />
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Caracteres adicionales que se combinarán con las opciones seleccionadas arriba
+                  </p>
+                </div>
+
+                <Separator className="my-6 bg-white/30 dark:bg-slate-600/30" />
+
                 {/* Advanced Options */}
                 <div className="space-y-4">
                   <Label className="text-base font-medium text-slate-700 dark:text-slate-200">Opciones avanzadas</Label>
@@ -581,25 +600,6 @@ export default function PasswordGenerator() {
                       </div>
                     ))}
                   </div>
-                </div>
-
-                <Separator className="my-6 bg-white/30 dark:bg-slate-600/30" />
-
-                {/* Custom Characters */}
-                <div className="space-y-3">
-                  <Label htmlFor="customChars" className="text-base font-medium text-slate-700 dark:text-slate-200">
-                    Caracteres especiales adicionales
-                  </Label>
-                  <Input
-                    id="customChars"
-                    value={config.customCharacters}
-                    onChange={(e) => updateConfig("customCharacters", e.target.value)}
-                    placeholder="Ej: !@#$%^&*()..."
-                    className="h-12 font-mono glass-input text-slate-800 dark:text-slate-100"
-                  />
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Caracteres adicionales que se combinarán con las opciones seleccionadas arriba
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -653,7 +653,7 @@ export default function PasswordGenerator() {
                       {passwords.map((password, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between pt-2 pb-2 pl-4 pr-4 password-display rounded-xl group"
+                          className="flex items-center justify-between px-4 py-2 password-display rounded-xl group"
                         >
                           <code className="font-mono text-base flex-1 mr-4 break-all select-all text-slate-800 dark:text-slate-100">
                             {password}
