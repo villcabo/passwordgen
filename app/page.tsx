@@ -653,7 +653,7 @@ export default function PasswordGenerator() {
                       {passwords.map((password, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-4 password-display rounded-xl group"
+                          className="flex items-center justify-between pt-2 pb-2 pl-4 pr-4 password-display rounded-xl group"
                         >
                           <code className="font-mono text-base flex-1 mr-4 break-all select-all text-slate-800 dark:text-slate-100">
                             {password}
@@ -673,7 +673,7 @@ export default function PasswordGenerator() {
                     <TabsContent value="export">
                       <div className="space-y-6">
                         <div className="p-6 glass-button rounded-xl">
-                          <pre className="font-mono text-sm whitespace-pre-wrap break-all max-h-[500px] overflow-y-auto text-slate-800 dark:text-slate-100">
+                          <pre className="font-mono text-lg whitespace-pre-wrap break-all max-h-[500px] overflow-y-auto text-slate-800 dark:text-slate-100">
                             {passwords.join("\n")}
                           </pre>
                         </div>
