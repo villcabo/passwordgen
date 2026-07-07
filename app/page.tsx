@@ -32,6 +32,8 @@ interface PasswordConfig {
 
 // RFC 3986 unreserved symbols: safe in connection strings, .env, YAML, SQL and shells
 const SAFE_SYMBOLS = "-_.~"
+// Classic symbol set accepted by virtually every application password policy
+const APP_SYMBOLS = "!@#$%^&*"
 const FULL_SYMBOLS = "!@#$%^&*()-_=+"
 
 // Characters that break common contexts where passwords end up stored or pasted
@@ -579,6 +581,14 @@ export default function PasswordGenerator() {
                       Seguro BD/URLs
                     </Button>
                     <Button
+                      variant={config.customCharacters === APP_SYMBOLS ? "default" : "outline"}
+                      size="sm"
+                      className={`h-7 px-2.5 text-xs ${config.customCharacters === APP_SYMBOLS ? "" : "glass-inset glass-hover"}`}
+                      onClick={() => updateConfig("customCharacters", APP_SYMBOLS)}
+                    >
+                      Apps
+                    </Button>
+                    <Button
                       variant={config.customCharacters === FULL_SYMBOLS ? "default" : "outline"}
                       size="sm"
                       className={`h-7 px-2.5 text-xs ${config.customCharacters === FULL_SYMBOLS ? "" : "glass-inset glass-hover"}`}
@@ -594,7 +604,12 @@ export default function PasswordGenerator() {
                     placeholder="Ej: -_.~"
                     className="text-center font-mono bg-white/50 dark:bg-white/[0.06]"
                   />
-                  {unsafeUsed.length > 0 ? (
+                  {config.customCharacters === APP_SYMBOLS || config.customCharacters === FULL_SYMBOLS ? (
+                    <p className="text-xs text-muted-foreground">
+                      Símbolos aceptados por la mayoría de las aplicaciones. Evítalos en contraseñas para BD,
+                      connection strings o .env
+                    </p>
+                  ) : unsafeUsed.length > 0 ? (
                     <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md p-2.5">
                       <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                       <div className="space-y-0.5">
