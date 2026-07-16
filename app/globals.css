@@ -4,24 +4,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Light mode is a tinted desktop, not a blank page — the glass needs something to refract */
+    --background: 228 34% 92%;
+    --foreground: 228 47% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 228 47% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 228 47% 12%;
     --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
+    --secondary: 228 30% 88%;
+    --secondary-foreground: 228 47% 12%;
+    --muted: 228 30% 88%;
+    --muted-foreground: 228 14% 42%;
+    --accent: 228 30% 88%;
+    --accent-foreground: 228 47% 12%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 228 22% 78%;
+    --input: 228 22% 78%;
     --ring: 262.1 83.3% 57.8%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
@@ -70,9 +71,9 @@
 
 /* Static aurora backdrop — gives the glass something to refract. No animation. */
 body {
-  background-image: radial-gradient(55rem 55rem at 12% -10%, hsl(243 75% 59% / 0.22), transparent 60%),
-    radial-gradient(45rem 45rem at 105% 15%, hsl(189 94% 43% / 0.16), transparent 60%),
-    radial-gradient(50rem 50rem at 30% 115%, hsl(258 90% 66% / 0.18), transparent 60%);
+  background-image: radial-gradient(55rem 55rem at 12% -10%, hsl(243 75% 59% / 0.32), transparent 62%),
+    radial-gradient(45rem 45rem at 105% 15%, hsl(189 94% 43% / 0.26), transparent 62%),
+    radial-gradient(50rem 50rem at 30% 115%, hsl(258 90% 66% / 0.28), transparent 62%);
   background-attachment: fixed;
 }
 
@@ -82,13 +83,18 @@ body {
     radial-gradient(50rem 50rem at 30% 115%, hsl(258 90% 66% / 0.16), transparent 60%);
 }
 
-/* macOS-style materials: blur + saturate only on top-level surfaces, never on controls */
+/*
+ * macOS-style materials: blur + saturate only on top-level surfaces, never on controls.
+ * Every edge is a dark hairline plus an inner white highlight — a white-on-white border
+ * reads as no border at all once the canvas is light.
+ */
 .glass-panel {
-  background: hsl(0 0% 100% / 0.55);
+  background: hsl(0 0% 100% / 0.72);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid hsl(0 0% 100% / 0.55);
-  box-shadow: 0 16px 48px -16px hsl(222 47% 20% / 0.25), inset 0 1px 0 hsl(0 0% 100% / 0.65);
+  border: 1px solid hsl(228 28% 52% / 0.2);
+  box-shadow: 0 20px 50px -20px hsl(228 40% 25% / 0.3), 0 2px 8px -2px hsl(228 40% 25% / 0.1),
+    inset 0 1px 0 hsl(0 0% 100% / 0.9);
 }
 
 .dark .glass-panel {
@@ -98,10 +104,10 @@ body {
 }
 
 .glass-chrome {
-  background: hsl(0 0% 100% / 0.5);
+  background: hsl(228 34% 92% / 0.6);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid hsl(0 0% 100% / 0.4);
+  border-bottom: 1px solid hsl(228 28% 52% / 0.16);
 }
 
 .dark .glass-chrome {
@@ -109,10 +115,13 @@ body {
   border-bottom: 1px solid hsl(215 25% 65% / 0.12);
 }
 
-/* Translucent fill for controls and rows inside a panel — no backdrop-filter here */
+/*
+ * Recessed fill for controls and rows inside a panel — no backdrop-filter here.
+ * An inset must be DARKER than the surface it sits in, or it reads as raised.
+ */
 .glass-inset {
-  background: hsl(0 0% 100% / 0.4);
-  border: 1px solid hsl(0 0% 100% / 0.55);
+  background: hsl(228 30% 45% / 0.07);
+  border: 1px solid hsl(228 28% 52% / 0.16);
 }
 
 .dark .glass-inset {
@@ -122,9 +131,22 @@ body {
 
 /* Opt-in hover state for interactive glass-inset rows */
 .glass-hover:hover {
-  background: hsl(0 0% 100% / 0.62);
+  background: hsl(228 30% 45% / 0.13);
 }
 
 .dark .glass-hover:hover {
   background: hsl(215 25% 65% / 0.12);
+}
+
+/* Text fields: recessed well with a soft inner shadow, so typing feels "into" the panel */
+.glass-field {
+  background: hsl(0 0% 100% / 0.6);
+  border: 1px solid hsl(228 28% 52% / 0.22);
+  box-shadow: inset 0 1px 2px hsl(228 40% 25% / 0.08);
+}
+
+.dark .glass-field {
+  background: hsl(215 25% 65% / 0.06);
+  border: 1px solid hsl(215 25% 65% / 0.16);
+  box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.2);
 }
