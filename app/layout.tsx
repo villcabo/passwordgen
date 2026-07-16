@@ -9,8 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Password Generator",
-  description: "Genera contraseñas seguras y personalizadas",
-  generator: "v0.dev",
+  description: "Generate secure, customizable passwords that are safe to paste into databases, .env files and shells",
   icons: {
     icon: [
       {
@@ -34,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}

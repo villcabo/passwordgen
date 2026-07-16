@@ -37,20 +37,20 @@ const FULL_SYMBOLS = "!@#$%^&*()-_=+"
 const UNSAFE_CHARS: Record<string, string> = {
   "@": "connection strings (user:pass@host)",
   ":": "connection strings",
-  "/": "URLs y URIs",
+  "/": "URLs and URIs",
   "?": "URLs (query string)",
-  "#": "URLs y comentarios en .env/YAML",
-  "&": "URLs y shell",
-  "=": "archivos .env",
+  "#": "URLs and .env/YAML comments",
+  "&": "URLs and shells",
+  "=": ".env files",
   "%": "URL encoding",
-  "'": "literales SQL",
-  '"': "SQL, JSON y YAML",
-  "\\": "secuencias de escape",
-  ";": "separador de sentencias SQL",
-  $: "interpolación en shell/.env",
-  "`": "interpolación en shell",
-  " ": "espacios rompen parsers",
-  "+": "URL encoding (se decodifica como espacio)",
+  "'": "SQL literals",
+  '"': "SQL, JSON and YAML",
+  "\\": "escape sequences",
+  ";": "SQL statement separator",
+  $: "shell and .env interpolation",
+  "`": "shell interpolation",
+  " ": "spaces break parsers",
+  "+": "URL encoding (decodes as a space)",
 }
 
 const MIN_LENGTH = 6
@@ -184,7 +184,7 @@ function Stepper({
         disabled={value <= min}
         onClick={() => onChange(clamp(value - 1))}
         className={`${buttonClass} border-r border-black/[0.08] dark:border-white/10`}
-        aria-label={`Disminuir ${label}`}
+        aria-label={`Decrease ${label}`}
       >
         <Minus className="w-3.5 h-3.5" />
       </button>
@@ -205,7 +205,7 @@ function Stepper({
         disabled={value >= max}
         onClick={() => onChange(clamp(value + 1))}
         className={`${buttonClass} border-l border-black/[0.08] dark:border-white/10`}
-        aria-label={`Aumentar ${label}`}
+        aria-label={`Increase ${label}`}
       >
         <Plus className="w-3.5 h-3.5" />
       </button>
@@ -443,8 +443,8 @@ export default function PasswordGenerator() {
       copyTimeout.current = setTimeout(() => setCopied(null), 2000)
     } catch (err) {
       toast({
-        title: "Error",
-        description: "No se pudo copiar la contraseña",
+        title: "Copy failed",
+        description: "Your browser blocked clipboard access. Select the password and copy it manually.",
         variant: "destructive",
       })
     }
@@ -469,15 +469,15 @@ export default function PasswordGenerator() {
             : config.length * Math.log2(charsetSize)
         )
   // Thresholds aligned with the length presets over the full charset:
-  // 8 chars ≈ 47 bits (Débil), 16 ≈ 95 (Fuerte), 24+ ≈ 142 (Excelente)
+  // 8 chars ≈ 47 bits (Weak), 16 ≈ 95 (Strong), 24+ ≈ 142 (Excellent)
   const strength =
     entropy < 50
-      ? { label: "Débil", bar: "bg-red-500", text: "text-red-600 dark:text-red-400" }
+      ? { label: "Weak", bar: "bg-red-500", text: "text-red-600 dark:text-red-400" }
       : entropy < 80
-        ? { label: "Aceptable", bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400" }
+        ? { label: "Fair", bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400" }
         : entropy < 110
-          ? { label: "Fuerte", bar: "bg-green-500", text: "text-green-600 dark:text-green-400" }
-          : { label: "Excelente", bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" }
+          ? { label: "Strong", bar: "bg-green-500", text: "text-green-600 dark:text-green-400" }
+          : { label: "Excellent", bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" }
 
   const unsafeUsed = [...new Set(config.customCharacters.split(""))].filter((char) => char in UNSAFE_CHARS)
 
@@ -500,12 +500,12 @@ export default function PasswordGenerator() {
             <Button asChild variant="ghost" size="icon">
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
                 <Github className="h-4 w-4" />
-                <span className="sr-only">Ver el código en GitHub</span>
+                <span className="sr-only">View the code on GitHub</span>
               </a>
             </Button>
             <Button onClick={toggleTheme} variant="ghost" size="icon">
               {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              <span className="sr-only">Cambiar tema</span>
+              <span className="sr-only">Switch theme</span>
             </Button>
           </div>
         </div>
@@ -516,17 +516,17 @@ export default function PasswordGenerator() {
           {/* Configuration Panel */}
           <div className="xl:col-span-1">
             <Card className="glass-panel rounded-2xl overflow-hidden">
-              <PanelHeader title="Configuración" />
+              <PanelHeader title="Settings" />
               <CardContent className="p-4 space-y-6">
                 {/* Length: one scale that carries the number, the shortcuts and the strength */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <Label className="font-medium">Longitud</Label>
+                    <Label className="font-medium">Length</Label>
                     <Stepper
                       value={config.length}
                       min={MIN_LENGTH}
                       max={MAX_LENGTH}
-                      label="Longitud de contraseña"
+                      label="Password length"
                       onChange={(next) => updateConfig("length", next)}
                     />
                   </div>
@@ -539,7 +539,7 @@ export default function PasswordGenerator() {
                       min={MIN_LENGTH}
                       step={1}
                       rangeClassName={strength.bar}
-                      aria-label="Longitud de contraseña"
+                      aria-label="Password length"
                     />
                     {LENGTH_TICKS.map((tick) => (
                       <button
@@ -548,7 +548,7 @@ export default function PasswordGenerator() {
                         onClick={() => updateConfig("length", tick)}
                         style={{ left: tickOffset(tick) }}
                         className="absolute top-4 -translate-x-1/2 flex flex-col items-center gap-1 group focus-visible:outline-none"
-                        aria-label={`Longitud ${tick} caracteres`}
+                        aria-label={`Length ${tick} characters`}
                       >
                         <span
                           className={`w-px h-1.5 transition-colors ${
@@ -567,20 +567,19 @@ export default function PasswordGenerator() {
                   </div>
 
                   <p className="text-xs text-muted-foreground" aria-live="polite">
-                    <span className={`font-medium ${strength.text}`}>{strength.label}</span> · {entropy} bits de
-                    entropía
+                    <span className={`font-medium ${strength.text}`}>{strength.label}</span> · {entropy} bits of entropy
                   </p>
                 </div>
 
                 {/* Quantity */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <Label className="font-medium">Cantidad de contraseñas</Label>
+                    <Label className="font-medium">Amount</Label>
                     <Stepper
                       value={config.quantity}
                       min={MIN_QUANTITY}
                       max={MAX_QUANTITY}
-                      label="Cantidad de contraseñas"
+                      label="Number of passwords"
                       onChange={(next) => updateConfig("quantity", next)}
                     />
                   </div>
@@ -604,12 +603,12 @@ export default function PasswordGenerator() {
 
                 {/* Character Options */}
                 <div className="space-y-3">
-                  <Label className="font-medium">Incluir caracteres</Label>
+                  <Label className="font-medium">Include characters</Label>
                   <div className="grid grid-cols-1 gap-2">
                     {[
-                      { id: "numbers", label: "Números (0-9)", key: "includeNumbers" },
-                      { id: "lowercase", label: "Minúsculas (a-z)", key: "includeLowercase" },
-                      { id: "uppercase", label: "Mayúsculas (A-Z)", key: "includeUppercase" },
+                      { id: "numbers", label: "Numbers (0-9)", key: "includeNumbers" },
+                      { id: "lowercase", label: "Lowercase (a-z)", key: "includeLowercase" },
+                      { id: "uppercase", label: "Uppercase (A-Z)", key: "includeUppercase" },
                     ].map((item) => (
                       <div
                         key={item.id}
@@ -631,7 +630,7 @@ export default function PasswordGenerator() {
                 {/* Custom Characters */}
                 <div className="space-y-2">
                   <Label htmlFor="customChars" className="font-medium">
-                    Caracteres especiales adicionales
+                    Symbols
                   </Label>
                   <div className="flex gap-1.5">
                     <Button
@@ -640,7 +639,7 @@ export default function PasswordGenerator() {
                       className={`h-7 px-2.5 text-xs ${config.customCharacters === SAFE_SYMBOLS ? "" : "glass-inset glass-hover"}`}
                       onClick={() => updateConfig("customCharacters", SAFE_SYMBOLS)}
                     >
-                      Seguro BD/URLs
+                      Database-safe
                     </Button>
                     <Button
                       variant={config.customCharacters === APP_SYMBOLS ? "default" : "outline"}
@@ -656,20 +655,19 @@ export default function PasswordGenerator() {
                       className={`h-7 px-2.5 text-xs ${config.customCharacters === FULL_SYMBOLS ? "" : "glass-inset glass-hover"}`}
                       onClick={() => updateConfig("customCharacters", FULL_SYMBOLS)}
                     >
-                      Completo
+                      Full
                     </Button>
                   </div>
                   <Input
                     id="customChars"
                     value={config.customCharacters}
                     onChange={(e) => updateConfig("customCharacters", e.target.value)}
-                    placeholder="Ej: -_.~"
+                    placeholder="e.g. -_.~"
                     className="text-center font-mono glass-field"
                   />
                   {config.customCharacters === APP_SYMBOLS || config.customCharacters === FULL_SYMBOLS ? (
                     <p className="text-xs text-muted-foreground">
-                      Símbolos aceptados por la mayoría de las aplicaciones. Evítalos en contraseñas para BD,
-                      connection strings o .env
+                      Accepted by most apps. Avoid them for database, connection string and .env passwords.
                     </p>
                   ) : unsafeUsed.length > 0 ? (
                     <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md p-2.5">
@@ -677,15 +675,15 @@ export default function PasswordGenerator() {
                       <div className="space-y-0.5">
                         {unsafeUsed.map((char) => (
                           <p key={char}>
-                            <code className="font-mono font-semibold">{char === " " ? "espacio" : char}</code> puede
-                            causar problemas en {UNSAFE_CHARS[char]}
+                            <code className="font-mono font-semibold">{char === " " ? "space" : char}</code> breaks{" "}
+                            {UNSAFE_CHARS[char]}
                           </p>
                         ))}
                       </div>
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Los caracteres seguros (-_.~) funcionan en connection strings, .env, SQL y shells
+                      These symbols (-_.~) survive connection strings, .env files, SQL and shells.
                     </p>
                   )}
                 </div>
@@ -694,22 +692,22 @@ export default function PasswordGenerator() {
 
                 {/* Advanced Options */}
                 <div className="space-y-3">
-                  <Label className="font-medium">Opciones avanzadas</Label>
+                  <Label className="font-medium">Advanced options</Label>
                   <div className="grid grid-cols-1 gap-2">
                     {[
-                      { id: "startLetter", label: "Iniciar con letra", key: "startWithLetter" },
-                      { id: "avoidSimilar", label: "Evitar similares (O,0,I,l)", key: "avoidSimilar" },
+                      { id: "startLetter", label: "Start with a letter", key: "startWithLetter" },
+                      { id: "avoidSimilar", label: "Avoid look-alikes (O,0,I,l)", key: "avoidSimilar" },
                       {
                         id: "avoidDuplicates",
-                        label: "Evitar duplicados",
+                        label: "Avoid duplicate characters",
                         key: "avoidDuplicates",
                         // Saying so beats silently generating repeats with the box still ticked
                         hint: duplicatesImpossible
-                          ? `Sin efecto: ${config.length} caracteres distintos no entran en un juego de ${charsetSize}. Bajá la longitud o sumá caracteres.`
+                          ? `No effect: ${config.length} distinct characters do not fit in a set of ${charsetSize}. Shorten the password or add characters.`
                           : undefined,
                       },
-                      { id: "avoidSequences", label: "Evitar secuencias", key: "avoidSequences" },
-                      { id: "autoGenerate", label: "Generación automática", key: "autoGenerate" },
+                      { id: "avoidSequences", label: "Avoid sequences", key: "avoidSequences" },
+                      { id: "autoGenerate", label: "Generate automatically", key: "autoGenerate" },
                     ].map((item) => (
                       <div
                         key={item.id}
@@ -744,8 +742,8 @@ export default function PasswordGenerator() {
           <div className="xl:col-span-2">
             <Card className="glass-panel rounded-2xl overflow-hidden">
               <PanelHeader
-                title="Contraseñas generadas"
-                meta={`${passwords.length} × ${config.length} caracteres`}
+                title="Generated passwords"
+                meta={`${passwords.length} × ${config.length} characters`}
               >
                 <Button
                   variant="outline"
@@ -759,18 +757,18 @@ export default function PasswordGenerator() {
                   ) : (
                     <Copy className="w-4 h-4 mr-2" />
                   )}
-                  {copied === "all" ? "Copiadas" : "Copiar todas"}
+                  {copied === "all" ? "Copied" : "Copy all"}
                 </Button>
                 <Button size="sm" onClick={generatePasswords}>
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Generar
+                  Generate
                 </Button>
               </PanelHeader>
               <CardContent className="p-4">
                 {passwords.length === 0 ? (
                   <div className="text-center py-16 text-muted-foreground">
                     <Shield className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p className="text-sm">Generá contraseñas para verlas acá</p>
+                    <p className="text-sm">Select Generate to create passwords</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
@@ -788,7 +786,7 @@ export default function PasswordGenerator() {
                             variant="ghost"
                             onClick={() => regeneratePassword(index)}
                             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            aria-label="Regenerar esta contraseña"
+                            aria-label="Regenerate this password"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
                           </Button>
@@ -797,7 +795,7 @@ export default function PasswordGenerator() {
                             variant="ghost"
                             onClick={() => copyToClipboard(password, index)}
                             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            aria-label="Copiar contraseña"
+                            aria-label="Copy password"
                           >
                             {copied === index ? (
                               <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
