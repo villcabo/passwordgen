@@ -1,18 +1,16 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { AlertTriangle, Check, Copy, Moon, RefreshCw, Shield, Sun } from "lucide-react"
+import { AlertTriangle, Check, Copy, Github, Minus, Moon, Plus, RefreshCw, Shield, Sun } from "lucide-react"
 import packageJson from "@/package.json"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { useToast } from "@/hooks/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "next-themes"
 
 interface PasswordConfig {
@@ -27,7 +25,6 @@ interface PasswordConfig {
   customCharacters: string
   autoGenerate: boolean
   quantity: number
-  viewMode: "detailed" | "export"
 }
 
 // RFC 3986 unreserved symbols: safe in connection strings, .env, YAML, SQL and shells
@@ -59,12 +56,25 @@ const UNSAFE_CHARS: Record<string, string> = {
 const MIN_LENGTH = 6
 const MAX_LENGTH = 64
 
-const PRESETS = [
-  { label: "Débil", length: 8 },
-  { label: "Fuerte", length: 16 },
-  { label: "Súper fuerte", length: 24 },
-  { label: "Extrema", length: 32 },
-]
+const MIN_QUANTITY = 1
+const MAX_QUANTITY = 30
+const QUANTITY_PRESETS = [1, 5, 10, 20]
+
+// Long enough to swallow a slider drag, short enough to still feel like a live preview
+const GENERATE_DELAY_MS = 300
+
+const REPO_URL = "https://github.com/villcabo/passwordgen"
+
+// Landmarks on the length axis, doubling as one-click shortcuts.
+// They carry no strength label on purpose: real strength depends on the charset too,
+// so only the live readout below the scale can state it truthfully.
+const LENGTH_TICKS = [8, 16, 24, 32, 64]
+
+// Thumb center travels between 10px and (100% - 10px), so ticks must follow the same inset
+const tickOffset = (value: number) => {
+  const percent = ((value - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 100
+  return `calc(${percent}% - ${(percent * 0.2).toFixed(2)}px + 10px)`
+}
 
 const defaultConfig: PasswordConfig = {
   length: 16,
@@ -78,7 +88,6 @@ const defaultConfig: PasswordConfig = {
   customCharacters: SAFE_SYMBOLS,
   autoGenerate: true,
   quantity: 5,
-  viewMode: "detailed",
 }
 
 const similarCharacters = "O0Il1"
@@ -105,16 +114,101 @@ const randomInt = (max: number): number => {
   return value % max
 }
 
-// macOS window chrome: traffic lights + centered title bar
-function WindowBar({ title }: { title: string }) {
+// Panel header: title and its live count on the left, actions on the right
+function PanelHeader({ title, meta, children }: { title: string; meta?: string; children?: React.ReactNode }) {
   return (
-    <div className="relative flex items-center px-4 py-2.5 border-b border-black/[0.06] dark:border-white/[0.06]">
-      <div className="flex gap-2" aria-hidden="true">
-        <span className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-[inset_0_0_1px_rgba(0,0,0,0.25)]" />
-        <span className="w-3 h-3 rounded-full bg-[#febc2e] shadow-[inset_0_0_1px_rgba(0,0,0,0.25)]" />
-        <span className="w-3 h-3 rounded-full bg-[#28c840] shadow-[inset_0_0_1px_rgba(0,0,0,0.25)]" />
+    <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-black/[0.08] dark:border-white/[0.08]">
+      <div className="min-w-0">
+        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+        {meta ? <p className="text-xs text-muted-foreground mt-0.5">{meta}</p> : null}
       </div>
-      <span className="absolute left-1/2 -translate-x-1/2 text-xs font-medium text-muted-foreground">{title}</span>
+      {children ? <div className="flex items-center gap-2 shrink-0">{children}</div> : null}
+    </div>
+  )
+}
+
+/*
+ * Direct numeric control: shows the value and both steps at once, and stays typeable
+ * for the far ends of a range that would take dozens of clicks to step to.
+ * The inner number input is natively a spinbutton, so the wrapper adds no ARIA role.
+ */
+function Stepper({
+  value,
+  min,
+  max,
+  label,
+  onChange,
+}: {
+  value: number
+  min: number
+  max: number
+  label: string
+  onChange: (next: number) => void
+}) {
+  const [text, setText] = useState(String(value))
+
+  // Follow slider, presets and ticks that change the value from outside
+  useEffect(() => {
+    setText(String(value))
+  }, [value])
+
+  const clamp = (n: number) => Math.min(max, Math.max(min, n))
+
+  const handleText = (raw: string) => {
+    setText(raw)
+    const parsed = Number.parseInt(raw, 10)
+    if (!Number.isNaN(parsed) && parsed >= min && parsed <= max) {
+      onChange(parsed)
+    }
+  }
+
+  // Half-typed and out-of-range values only settle on blur, so typing "7" toward "47" survives
+  const commit = () => {
+    const parsed = Number.parseInt(text, 10)
+    if (Number.isNaN(parsed)) {
+      setText(String(value))
+      return
+    }
+    const clamped = clamp(parsed)
+    setText(String(clamped))
+    onChange(clamped)
+  }
+
+  const buttonClass =
+    "flex items-center justify-center w-8 h-8 shrink-0 text-muted-foreground transition-colors hover:text-foreground hover:bg-black/[0.06] dark:hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+
+  return (
+    <div className="inline-flex items-center rounded-lg glass-inset overflow-hidden focus-within:ring-2 focus-within:ring-ring">
+      <button
+        type="button"
+        disabled={value <= min}
+        onClick={() => onChange(clamp(value - 1))}
+        className={`${buttonClass} border-r border-black/[0.08] dark:border-white/10`}
+        aria-label={`Disminuir ${label}`}
+      >
+        <Minus className="w-3.5 h-3.5" />
+      </button>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={max}
+        value={text}
+        onChange={(e) => handleText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && commit()}
+        aria-label={label}
+        className="w-11 h-8 bg-transparent text-center font-mono text-sm tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <button
+        type="button"
+        disabled={value >= max}
+        onClick={() => onChange(clamp(value + 1))}
+        className={`${buttonClass} border-l border-black/[0.08] dark:border-white/10`}
+        aria-label={`Aumentar ${label}`}
+      >
+        <Plus className="w-3.5 h-3.5" />
+      </button>
     </div>
   )
 }
@@ -148,7 +242,6 @@ export default function PasswordGenerator() {
   const [config, setConfig] = useState<PasswordConfig>(defaultConfig)
   const [passwords, setPasswords] = useState<string[]>([])
   const [mounted, setMounted] = useState(false)
-  const [lengthText, setLengthText] = useState(String(defaultConfig.length))
   const [copied, setCopied] = useState<number | "all" | null>(null)
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { toast } = useToast()
@@ -177,17 +270,16 @@ export default function PasswordGenerator() {
     }
   }, [config, mounted])
 
-  // Auto-generate passwords when config changes (if enabled)
+  /*
+   * Auto-generate on config change, debounced: dragging the slider fires a change per step,
+   * and every intermediate length would otherwise generate a full batch nobody asked to see.
+   * The cleanup cancels the pending run, so only the value you settle on is generated.
+   */
   useEffect(() => {
-    if (config.autoGenerate && mounted) {
-      generatePasswords()
-    }
+    if (!config.autoGenerate || !mounted) return
+    const timer = setTimeout(generatePasswords, GENERATE_DELAY_MS)
+    return () => clearTimeout(timer)
   }, [config, mounted])
-
-  // Keep the numeric input in sync with slider/preset changes
-  useEffect(() => {
-    setLengthText(String(config.length))
-  }, [config.length])
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark")
@@ -195,25 +287,6 @@ export default function PasswordGenerator() {
 
   const updateConfig = (key: keyof PasswordConfig, value: any) => {
     setConfig((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const handleLengthText = (raw: string) => {
-    setLengthText(raw)
-    const parsed = Number.parseInt(raw, 10)
-    if (!Number.isNaN(parsed) && parsed >= MIN_LENGTH && parsed <= MAX_LENGTH) {
-      updateConfig("length", parsed)
-    }
-  }
-
-  const commitLengthText = () => {
-    const parsed = Number.parseInt(lengthText, 10)
-    if (Number.isNaN(parsed)) {
-      setLengthText(String(config.length))
-      return
-    }
-    const clamped = Math.min(MAX_LENGTH, Math.max(MIN_LENGTH, parsed))
-    setLengthText(String(clamped))
-    updateConfig("length", clamped)
   }
 
   const getCharacterSet = (): string => {
@@ -272,10 +345,6 @@ export default function PasswordGenerator() {
     return sequences.some((seq) => lower.includes(seq))
   }
 
-  const hasDuplicates = (password: string): boolean => {
-    return new Set(password).size !== password.length
-  }
-
   const filterSimilar = (set: string): string => {
     if (!config.avoidSimilar) return set
     return set
@@ -290,102 +359,67 @@ export default function PasswordGenerator() {
 
     if (!charset) return ""
 
-    let attempts = 0
-    const maxAttempts = 1000
+    const lowercaseSet = config.includeLowercase ? filterSimilar("abcdefghijklmnopqrstuvwxyz") : ""
+    const uppercaseSet = config.includeUppercase ? filterSimilar("ABCDEFGHIJKLMNOPQRSTUVWXYZ") : ""
+    const numberSet = config.includeNumbers ? filterSimilar("0123456789") : ""
+    const specialSet = config.customCharacters.trim() ? filterSimilar(config.customCharacters) : ""
 
-    while (attempts < maxAttempts) {
-      let password = ""
-      let remainingLength = config.length
+    /*
+     * Distinct characters are drawn without replacement — each pick leaves the pool — so a
+     * candidate satisfies "no duplicates" by construction, in one pass. Rejecting whole
+     * passwords until one happened to have no repeats needed ~1000 tries at length 32 and
+     * still failed, because 32 distinct draws out of 61 almost never happen by chance.
+     * Beyond charset.length it is impossible outright (pigeonhole), so the option is off.
+     */
+    const drawDistinct = config.avoidDuplicates && config.length <= charset.length
 
-      const requiredChars: string[] = []
+    const buildCandidate = (): string => {
+      const pool = charset.split("")
 
-      if (config.startWithLetter && letterSet) {
-        requiredChars.push(letterSet[randomInt(letterSet.length)])
-        remainingLength--
+      const draw = (from: string): string => {
+        const options = drawDistinct ? from.split("").filter((char) => pool.includes(char)) : from.split("")
+        if (options.length === 0) return ""
+        const pick = options[randomInt(options.length)]
+        if (drawDistinct) pool.splice(pool.indexOf(pick), 1)
+        return pick
       }
 
-      const lowercaseSet = config.includeLowercase ? filterSimilar("abcdefghijklmnopqrstuvwxyz") : ""
-      const uppercaseSet = config.includeUppercase ? filterSimilar("ABCDEFGHIJKLMNOPQRSTUVWXYZ") : ""
-      const numberSet = config.includeNumbers ? filterSimilar("0123456789") : ""
-      const specialSet = config.customCharacters.trim() ? filterSimilar(config.customCharacters) : ""
+      const head = config.startWithLetter && letterSet ? draw(letterSet) : ""
 
-      if (lowercaseSet && remainingLength > 0) {
-        if (!config.startWithLetter || !/[a-z]/.test(requiredChars.join(""))) {
-          requiredChars.push(lowercaseSet[randomInt(lowercaseSet.length)])
-          remainingLength--
-        }
+      // One guaranteed character per enabled class, unless the head already covers that class
+      const required: string[] = []
+      for (const set of [lowercaseSet, uppercaseSet, numberSet, specialSet]) {
+        if (!set) continue
+        if (head && set.includes(head)) continue
+        if (head.length + required.length >= config.length) break
+        const char = draw(set)
+        if (char) required.push(char)
       }
 
-      if (uppercaseSet && remainingLength > 0) {
-        if (!config.startWithLetter || !/[A-Z]/.test(requiredChars.join(""))) {
-          requiredChars.push(uppercaseSet[randomInt(uppercaseSet.length)])
-          remainingLength--
-        }
+      const rest: string[] = []
+      for (let i = head.length + required.length; i < config.length; i++) {
+        const char = draw(charset)
+        if (!char) break
+        rest.push(char)
       }
 
-      if (numberSet && remainingLength > 0) {
-        requiredChars.push(numberSet[randomInt(numberSet.length)])
-        remainingLength--
+      // Shuffle everything after the head, so the guaranteed classes are not in a fixed order
+      const body = [...required, ...rest]
+      for (let i = body.length - 1; i > 0; i--) {
+        const j = randomInt(i + 1)
+        ;[body[i], body[j]] = [body[j], body[i]]
       }
 
-      if (specialSet && remainingLength > 0) {
-        requiredChars.push(specialSet[randomInt(specialSet.length)])
-        remainingLength--
-      }
-
-      const randomChars: string[] = []
-      for (let i = 0; i < remainingLength; i++) {
-        randomChars.push(charset[randomInt(charset.length)])
-      }
-
-      const allChars = [...requiredChars, ...randomChars]
-
-      if (config.startWithLetter && allChars.length > 0) {
-        const firstChar = allChars[0]
-        const restChars = allChars.slice(1)
-
-        for (let i = restChars.length - 1; i > 0; i--) {
-          const j = randomInt(i + 1)
-          ;[restChars[i], restChars[j]] = [restChars[j], restChars[i]]
-        }
-
-        password = firstChar + restChars.join("")
-      } else {
-        for (let i = allChars.length - 1; i > 0; i--) {
-          const j = randomInt(i + 1)
-          ;[allChars[i], allChars[j]] = [allChars[j], allChars[i]]
-        }
-        password = allChars.join("")
-      }
-
-      let isValid = true
-
-      if (config.avoidDuplicates && hasDuplicates(password)) {
-        isValid = false
-      }
-
-      if (config.avoidSequences && hasSequence(password)) {
-        isValid = false
-      }
-
-      if (isValid) {
-        return password
-      }
-
-      attempts++
+      return head + body.join("")
     }
 
-    let fallback = ""
-    if (config.startWithLetter && letterSet) {
-      fallback += letterSet[randomInt(letterSet.length)]
+    // Sequences are the only rule left that a candidate cannot satisfy by construction
+    let password = buildCandidate()
+    for (let attempts = 0; config.avoidSequences && hasSequence(password) && attempts < 200; attempts++) {
+      password = buildCandidate()
     }
 
-    const remainingLength = config.length - fallback.length
-    for (let i = 0; i < remainingLength; i++) {
-      fallback += charset[randomInt(charset.length)]
-    }
-
-    return fallback
+    return password
   }
 
   const generatePasswords = () => {
@@ -416,9 +450,24 @@ export default function PasswordGenerator() {
     }
   }
 
-  // Entropy-based strength: length × log2(charset size)
   const charsetSize = getCharacterSet().length
-  const entropy = charsetSize > 0 ? Math.round(config.length * Math.log2(charsetSize)) : 0
+  // Pigeonhole: distinct characters cannot outnumber the character set
+  const canAvoidDuplicates = config.avoidDuplicates && config.length <= charsetSize && charsetSize > 0
+  const duplicatesImpossible = config.avoidDuplicates && charsetSize > 0 && config.length > charsetSize
+
+  /*
+   * Entropy must describe how the password is actually drawn. With replacement every position
+   * has the full charset, so it is length × log2(size). Drawing distinct characters shrinks the
+   * pool by one each time, so it is the sum of log2 over the shrinking pool — always lower.
+   */
+  const entropy =
+    charsetSize === 0
+      ? 0
+      : Math.round(
+          canAvoidDuplicates
+            ? Array.from({ length: config.length }, (_, i) => Math.log2(charsetSize - i)).reduce((a, b) => a + b, 0)
+            : config.length * Math.log2(charsetSize)
+        )
   // Thresholds aligned with the length presets over the full charset:
   // 8 chars ≈ 47 bits (Débil), 16 ≈ 95 (Fuerte), 24+ ≈ 142 (Excelente)
   const strength =
@@ -447,10 +496,18 @@ export default function PasswordGenerator() {
               v{packageJson.version}
             </span>
           </div>
-          <Button onClick={toggleTheme} variant="ghost" size="icon">
-            {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            <span className="sr-only">Cambiar tema</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button asChild variant="ghost" size="icon">
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+                <Github className="h-4 w-4" />
+                <span className="sr-only">Ver el código en GitHub</span>
+              </a>
+            </Button>
+            <Button onClick={toggleTheme} variant="ghost" size="icon">
+              {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span className="sr-only">Cambiar tema</span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -459,83 +516,88 @@ export default function PasswordGenerator() {
           {/* Configuration Panel */}
           <div className="xl:col-span-1">
             <Card className="glass-panel rounded-2xl overflow-hidden">
-              <WindowBar title="Configuración" />
-              <CardHeader className="pb-4">
-                <CardDescription>Personaliza tu generador de contraseñas</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Length */}
+              <PanelHeader title="Configuración" />
+              <CardContent className="p-4 space-y-6">
+                {/* Length: one scale that carries the number, the shortcuts and the strength */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="font-medium">Longitud de contraseña</Label>
-                    <span className={`text-xs font-medium ${strength.text}`}>
-                      {strength.label} · {entropy} bits
-                    </span>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label className="font-medium">Longitud</Label>
+                    <Stepper
+                      value={config.length}
+                      min={MIN_LENGTH}
+                      max={MAX_LENGTH}
+                      label="Longitud de contraseña"
+                      onChange={(next) => updateConfig("length", next)}
+                    />
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESETS.map((preset) => (
-                      <Button
-                        key={preset.label}
-                        variant={config.length === preset.length ? "default" : "outline"}
-                        size="sm"
-                        className={`h-7 px-2.5 text-xs ${config.length === preset.length ? "" : "glass-inset glass-hover"}`}
-                        onClick={() => updateConfig("length", preset.length)}
-                      >
-                        {preset.label} · {preset.length}
-                      </Button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-3">
+                  <div className="relative pb-8">
                     <Slider
                       value={[config.length]}
                       onValueChange={(value) => updateConfig("length", value[0])}
                       max={MAX_LENGTH}
                       min={MIN_LENGTH}
                       step={1}
-                      className="flex-1"
-                    />
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={MIN_LENGTH}
-                      max={MAX_LENGTH}
-                      value={lengthText}
-                      onChange={(e) => handleLengthText(e.target.value)}
-                      onBlur={commitLengthText}
-                      onKeyDown={(e) => e.key === "Enter" && commitLengthText()}
-                      className="w-20 h-9 text-center font-mono bg-white/50 dark:bg-white/[0.06]"
+                      rangeClassName={strength.bar}
                       aria-label="Longitud de contraseña"
                     />
+                    {LENGTH_TICKS.map((tick) => (
+                      <button
+                        key={tick}
+                        type="button"
+                        onClick={() => updateConfig("length", tick)}
+                        style={{ left: tickOffset(tick) }}
+                        className="absolute top-4 -translate-x-1/2 flex flex-col items-center gap-1 group focus-visible:outline-none"
+                        aria-label={`Longitud ${tick} caracteres`}
+                      >
+                        <span
+                          className={`w-px h-1.5 transition-colors ${
+                            config.length === tick ? "bg-foreground/50" : "bg-foreground/20"
+                          }`}
+                        />
+                        <span
+                          className={`text-[10px] font-mono tabular-nums transition-colors group-hover:text-foreground group-focus-visible:text-foreground group-focus-visible:underline ${
+                            config.length === tick ? "text-foreground font-semibold" : "text-muted-foreground"
+                          }`}
+                        >
+                          {tick}
+                        </span>
+                      </button>
+                    ))}
                   </div>
 
-                  <div className="h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${strength.bar}`}
-                      style={{ width: `${Math.min(100, (entropy / 128) * 100)}%` }}
-                    />
-                  </div>
+                  <p className="text-xs text-muted-foreground" aria-live="polite">
+                    <span className={`font-medium ${strength.text}`}>{strength.label}</span> · {entropy} bits de
+                    entropía
+                  </p>
                 </div>
 
                 {/* Quantity */}
-                <div className="space-y-2">
-                  <Label className="font-medium">Cantidad de contraseñas</Label>
-                  <Select
-                    value={config.quantity.toString()}
-                    onValueChange={(value) => updateConfig("quantity", Number.parseInt(value))}
-                  >
-                    <SelectTrigger className="bg-white/50 dark:bg-white/[0.06]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label className="font-medium">Cantidad de contraseñas</Label>
+                    <Stepper
+                      value={config.quantity}
+                      min={MIN_QUANTITY}
+                      max={MAX_QUANTITY}
+                      label="Cantidad de contraseñas"
+                      onChange={(next) => updateConfig("quantity", next)}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {QUANTITY_PRESETS.map((quantity) => (
+                      <Button
+                        key={quantity}
+                        variant={config.quantity === quantity ? "default" : "outline"}
+                        size="sm"
+                        className={`h-7 px-3 text-xs font-mono ${config.quantity === quantity ? "" : "glass-inset glass-hover"}`}
+                        onClick={() => updateConfig("quantity", quantity)}
+                      >
+                        {quantity}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 <Separator />
@@ -602,7 +664,7 @@ export default function PasswordGenerator() {
                     value={config.customCharacters}
                     onChange={(e) => updateConfig("customCharacters", e.target.value)}
                     placeholder="Ej: -_.~"
-                    className="text-center font-mono bg-white/50 dark:bg-white/[0.06]"
+                    className="text-center font-mono glass-field"
                   />
                   {config.customCharacters === APP_SYMBOLS || config.customCharacters === FULL_SYMBOLS ? (
                     <p className="text-xs text-muted-foreground">
@@ -637,22 +699,39 @@ export default function PasswordGenerator() {
                     {[
                       { id: "startLetter", label: "Iniciar con letra", key: "startWithLetter" },
                       { id: "avoidSimilar", label: "Evitar similares (O,0,I,l)", key: "avoidSimilar" },
-                      { id: "avoidDuplicates", label: "Evitar duplicados", key: "avoidDuplicates" },
+                      {
+                        id: "avoidDuplicates",
+                        label: "Evitar duplicados",
+                        key: "avoidDuplicates",
+                        // Saying so beats silently generating repeats with the box still ticked
+                        hint: duplicatesImpossible
+                          ? `Sin efecto: ${config.length} caracteres distintos no entran en un juego de ${charsetSize}. Bajá la longitud o sumá caracteres.`
+                          : undefined,
+                      },
                       { id: "avoidSequences", label: "Evitar secuencias", key: "avoidSequences" },
                       { id: "autoGenerate", label: "Generación automática", key: "autoGenerate" },
                     ].map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center space-x-3 p-2.5 rounded-lg glass-inset glass-hover transition-colors"
+                        className="flex items-start gap-3 p-2.5 rounded-lg glass-inset glass-hover transition-colors"
                       >
                         <Checkbox
                           id={item.id}
                           checked={config[item.key as keyof PasswordConfig] as boolean}
                           onCheckedChange={(checked) => updateConfig(item.key as keyof PasswordConfig, checked)}
+                          className="mt-0.5"
                         />
-                        <Label htmlFor={item.id} className="text-sm cursor-pointer flex-1">
-                          {item.label}
-                        </Label>
+                        <div className="flex-1 min-w-0">
+                          <Label htmlFor={item.id} className="text-sm cursor-pointer">
+                            {item.label}
+                          </Label>
+                          {item.hint ? (
+                            <p className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-1">
+                              <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                              <span>{item.hint}</span>
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -664,95 +743,72 @@ export default function PasswordGenerator() {
           {/* Generated Passwords */}
           <div className="xl:col-span-2">
             <Card className="glass-panel rounded-2xl overflow-hidden">
-              <WindowBar title="Contraseñas generadas" />
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardDescription>
-                    {passwords.length} contraseña{passwords.length !== 1 ? "s" : ""} de {config.length} caracteres
-                  </CardDescription>
-                  <Button onClick={generatePasswords}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Generar
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
+              <PanelHeader
+                title="Contraseñas generadas"
+                meta={`${passwords.length} × ${config.length} caracteres`}
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="glass-inset glass-hover"
+                  onClick={() => copyToClipboard(passwords, "all")}
+                  disabled={passwords.length === 0}
+                >
+                  {copied === "all" ? (
+                    <Check className="w-4 h-4 mr-2 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <Copy className="w-4 h-4 mr-2" />
+                  )}
+                  {copied === "all" ? "Copiadas" : "Copiar todas"}
+                </Button>
+                <Button size="sm" onClick={generatePasswords}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Generar
+                </Button>
+              </PanelHeader>
+              <CardContent className="p-4">
                 {passwords.length === 0 ? (
                   <div className="text-center py-16 text-muted-foreground">
                     <Shield className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p>Haz clic en "Generar" para crear contraseñas</p>
+                    <p className="text-sm">Generá contraseñas para verlas acá</p>
                   </div>
                 ) : (
-                  <Tabs
-                    defaultValue="detailed"
-                    value={config.viewMode}
-                    onValueChange={(v) => updateConfig("viewMode", v as "detailed" | "export")}
-                  >
-                    <TabsList className="grid w-full grid-cols-2 mb-4 glass-inset">
-                      <TabsTrigger value="detailed">Vista detallada</TabsTrigger>
-                      <TabsTrigger value="export">Vista para exportar</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="detailed" className="space-y-2">
-                      {passwords.map((password, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between gap-2 px-4 py-2 rounded-lg glass-inset glass-hover transition-colors group"
-                        >
-                          <code className="font-mono text-sm flex-1 break-all select-all">
-                            <PasswordChars value={password} />
-                          </code>
-                          <div className="flex gap-1 shrink-0">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => regeneratePassword(index)}
-                              className="opacity-50 group-hover:opacity-100 transition-opacity"
-                              aria-label="Regenerar esta contraseña"
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyToClipboard(password, index)}
-                              className="opacity-50 group-hover:opacity-100 transition-opacity"
-                              aria-label="Copiar contraseña"
-                            >
-                              {copied === index ? (
-                                <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                    {passwords.map((password, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between gap-2 pl-3 pr-1.5 py-1.5 rounded-lg glass-inset glass-hover transition-colors"
+                      >
+                        <code className="font-mono text-sm flex-1 break-all select-all">
+                          <PasswordChars value={password} />
+                        </code>
+                        <div className="flex gap-0.5 shrink-0">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => regeneratePassword(index)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            aria-label="Regenerar esta contraseña"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => copyToClipboard(password, index)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            aria-label="Copiar contraseña"
+                          >
+                            {copied === index ? (
+                              <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
                         </div>
-                      ))}
-                    </TabsContent>
-
-                    <TabsContent value="export">
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-lg glass-inset">
-                          <pre className="font-mono text-sm whitespace-pre-wrap break-all max-h-[500px] overflow-y-auto">
-                            {passwords.join("\n")}
-                          </pre>
-                        </div>
-                        <Button onClick={() => copyToClipboard(passwords, "all")} className="w-full">
-                          {copied === "all" ? (
-                            <>
-                              <Check className="w-4 h-4 mr-2" />
-                              Copiadas
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-4 h-4 mr-2" />
-                              Copiar todas las contraseñas
-                            </>
-                          )}
-                        </Button>
                       </div>
-                    </TabsContent>
-                  </Tabs>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
